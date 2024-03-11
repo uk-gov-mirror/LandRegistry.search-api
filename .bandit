@@ -1,0 +1,3 @@
+[bandit]
+skips = B113
+exclude = migrations/versions/*

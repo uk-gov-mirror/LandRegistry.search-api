@@ -1,32 +1,76 @@
-from flask_migrate import Migrate
-from flask_migrate import MigrateCommand
-from flask_script import Manager
-import os
-from search_api.extensions import db
+# This entire file is a shim that allows existing dev-env, Puppet and S2I set ups to continue functioning in the
+# absence of flask-script. Please prefer using the flask commands over manage.py based commands.
+import subprocess  # nosec
+import sys
+
+from search_api.dependencies.stat_provs import update_stat_provs_data
 from search_api.main import app
 
 
-migrate = Migrate(app, db)
-# ***** For Alembic end ******
-
-manager = Manager(app)
-
-# ***** For Alembic start ******
-manager.add_command('db', MigrateCommand)
-# ***** For Alembic end ******
+def run():
+    subprocess.call(["flask", "run"])  # nosec
 
 
-# ***** Custom commands start ******
-@manager.command
-def runserver(port=9798):
-    """Run the app using flask server"""
+# If the application manages a database, uncomment the following code block.
 
-    os.environ["PYTHONUNBUFFERED"] = "yes"
-    os.environ["LOG_LEVEL"] = "DEBUG"
-    os.environ["COMMIT"] = "LOCAL"
 
-    app.run(debug=True, port=int(port))
+def db():
+    if len(sys.argv) <= 2:
+        raise Exception("db expects a sub-command")
+
+    sub_command = sys.argv[2]
+    if sub_command == "init":
+        init()
+    elif sub_command == "migrate":
+        migrate()
+    elif sub_command == "upgrade":
+        upgrade()
+    elif sub_command == "downgrade":
+        downgrade()
+    else:
+        print("sub-command '{}' unknown".format(sub_command))
+
+
+def update_stat_provs():
+    update_stat_provs_data()
+
+
+def init():
+    subprocess.call(["flask", "db", "init"])  # nosec
+
+
+def migrate():
+    subprocess.call(["flask", "db", "revision", "--autogenerate"])  # nosec
+
+
+def upgrade():
+    try:
+        subprocess.check_output(["flask", "db", "upgrade", "head"])  # nosec
+    except subprocess.CalledProcessError as grepexc:
+        sys.exit(grepexc.returncode)
+
+
+def downgrade():
+    subprocess.call(["flask", "db", "downgrade"])  # nosec
 
 
 if __name__ == "__main__":
-    manager.run()
+    # This shim doesn't import anything from the application, so has no logger configuration.
+    # Print warnings to STDOUT.
+    print("WARNING: use of manage.py is deprecated")
+    if len(sys.argv) <= 1:
+        raise Exception("Please specify a command")
+
+    command = sys.argv[1]
+
+    if command == "runserver":
+        run()
+    # If the application manages a database, uncomment the following code block.
+    elif command == "db":
+        db()
+    elif command == "update_stat_provs":
+        with app.app_context():
+            with app.test_request_context():
+                update_stat_provs()
+    else:
+        raise Exception("Command unknown")

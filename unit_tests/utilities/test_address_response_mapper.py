@@ -3,8 +3,10 @@ import unittest
 
 from search_api.main import app
 from search_api.utilities import address_response_mapper
-from unit_tests.data import test_address_response_data, test_address_response_data_different_roads, \
-    test_address_response_data_different_towns, test_address_response_filtered_data
+from unit_tests.data import (test_address_response_data,
+                             test_address_response_data_different_roads,
+                             test_address_response_data_different_towns,
+                             test_address_response_filtered_data)
 
 response_address_filtered_data_json = json.dumps(test_address_response_filtered_data.response_address_filtered_data,
                                                  sort_keys=True)

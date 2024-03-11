@@ -3,7 +3,12 @@ services:
   # Notice how the service name, container name and repo directory (where the Dockerfile lives) all match.
   search-api:
     container_name: search-api
-    build: /vagrant/apps/search-api
+    build:
+      context: ./search-api
+      # To allow a matching user to the user running the dev env to be created for running the container
+      args:
+        - OUTSIDE_UID=${OUTSIDE_UID}
+        - OUTSIDE_GID=${OUTSIDE_GID}
     restart: on-failure
     ports:
       # The base Flask Dockerfile tells gunicorn to use 8080 by default, we expose it here and map it to a unique
@@ -11,7 +16,7 @@ services:
       - "9898:8080"
     volumes:
       # Our convention is (for python) to always map the app files to /src within the container
-      - /vagrant/apps/search-api:/src
+      - ./search-api:/src:delegated
     # Redirect all the logs to a logstash server. Logstash is set up to parse RFC5424 format messages.
     logging:
       driver: syslog
@@ -22,10 +27,15 @@ services:
     # Docker-compose will ensure logstash is started before the application starts.
     depends_on:
       - logstash
-      - postgres
+      - postgres-13
   dev-search-service-search-api:
     container_name: dev-search-service-search-api
-    build: /vagrant/apps/search-api
+    build:
+      context: ./search-api
+      # To allow a matching user to the user running the dev env to be created for running the container
+      args:
+        - OUTSIDE_UID=${OUTSIDE_UID}
+        - OUTSIDE_GID=${OUTSIDE_GID}
     restart: on-failure
     ports:
       # The base Flask Dockerfile tells gunicorn to use 8080 by default, we expose it here and map it to a unique
@@ -33,7 +43,7 @@ services:
       - "9899:8080"
     volumes:
       # Our convention is (for python) to always map the app files to /src within the container
-      - /vagrant/apps/search-api:/src
+      - ./search-api:/src:delegated
     # Redirect all the logs to a logstash server. Logstash is set up to parse RFC5424 format messages.
     logging:
       driver: syslog
@@ -44,10 +54,10 @@ services:
     # Docker-compose will ensure logstash is started before the application starts.
     depends_on:
       - logstash
-      - postgres
+      - postgres-13
     environment:
       - APP_NAME=search-api
-      - SQL_HOST=postgres
+      - SQL_HOST=postgres-13
       - LOG_LEVEL=DEBUG
       - COMMIT=LOCAL
       - SQL_DATABASE=llc_register
@@ -56,10 +66,10 @@ services:
       - ALEMBIC_SQL_USERNAME=root
       - SQL_USE_ALEMBIC_USER=false
       - ADDRESS_API_URL=http://address-api:8080
-      - MAX_HEALTH_CASCADE=
+      - MAX_HEALTH_CASCADE=5
       - FEEDER_SQL_USERNAME=llc_register_feeder
       - FEEDER_SQL_PASSWORD=llc_register_feeder_password
       - AUTHENTICATION_API_URL=http://dev-search-authentication-api:8080/v2.0
       - AUTHENTICATION_API_ROOT=http://dev-search-authentication-api:8080
       - ACCTEST_SQL_USERNAME=llc_register_acceptance_test_user
-      - ACCTEST_SQL_PASSWORD=ragdVXG3epx9bEScOAhrrmKh2chG0jFIxt0i
+      - ACCTEST_SQL_PASSWORD=llc_register_acceptance_test_password

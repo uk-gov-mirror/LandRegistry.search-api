@@ -12,6 +12,7 @@ down_revision = 'e78127b9d712'
 
 from alembic import op
 
+
 def upgrade():
     op.drop_constraint('geometry_feature_pkey', 'geometry_feature')
     op.create_primary_key('geometry_feature_pkey', 'geometry_feature',

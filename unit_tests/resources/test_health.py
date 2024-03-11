@@ -1,5 +1,6 @@
-from search_api.main import app
 import unittest
+
+from search_api.main import app
 
 
 class TestHealth(unittest.TestCase):

@@ -1,8 +1,8 @@
+import base64
 import json
 import re
 
-from flask import Blueprint, current_app, g, Response
-
+from flask import Blueprint, Response, current_app, g, request
 from search_api import config
 from search_api.exceptions import ApplicationError
 from search_api.utilities import address_response_mapper
@@ -24,11 +24,15 @@ partial_postcode_regex_check = '^(([gG][iI][rR] {0,}0[aA]{2})|((([a-pr-uwyzA-PR-
                                '[a-hk-yA-HK-Y][0-9][abehmnprv-yABEHMNPRV-Y])))( {0,}[0-9]' \
                                '[abd-hjlnp-uw-zABD-HJLNP-UW-Z]{2})?))$'
 
-uprn_regex_check = '^[0-9]{6,12}$'
+uprn_regex_check = r'^[0-9]{1,13}$'
 
 
 @addresses.route('/postcode/<postcode>', methods=['GET'])
 def get_addresses_by_postcode(postcode):
+    is_base64 = request.args.get('base64')
+    if is_base64 and is_base64.upper() == "TRUE":
+        postcode = base64.urlsafe_b64decode(postcode).decode('UTF8')
+
     current_app.logger.info("Get address by postcode '%s'", postcode)
     postcode = postcode.strip()
     postcode_is_valid = re.match(postcode_regex_check, postcode)
@@ -43,6 +47,10 @@ def get_addresses_by_postcode(postcode):
 
 @addresses.route('/uprn/<uprn>', methods=['GET'])
 def get_addresses_by_uprn(uprn):
+    is_base64 = request.args.get('base64')
+    if is_base64 and is_base64.upper() == "TRUE":
+        uprn = base64.urlsafe_b64decode(uprn).decode('UTF8')
+
     current_app.logger.info("Get address by UPRN '%s'", uprn)
     uprn = uprn.strip()
     uprn_is_valid = re.match(uprn_regex_check, uprn)
@@ -57,6 +65,10 @@ def get_addresses_by_uprn(uprn):
 
 @addresses.route('/text/<text>', methods=['GET'])
 def get_addresses_by_text(text):
+    is_base64 = request.args.get('base64')
+    if is_base64 and is_base64.upper() == "TRUE":
+        text = base64.urlsafe_b64decode(text).decode('UTF8')
+
     current_app.logger.info("Get address by text '%s'", text)
     text = text.strip()
 

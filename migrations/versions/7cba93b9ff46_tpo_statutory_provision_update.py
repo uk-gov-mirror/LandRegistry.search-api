@@ -10,8 +10,9 @@ Create Date: 2018-05-10 09:02:45.447660
 revision = '7cba93b9ff46'
 down_revision = '8c0821242aa1'
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
+from sqlalchemy.sql import text
 
 
 def upgrade():
@@ -31,7 +32,7 @@ def downgrade():
 
 
 def insert_into_charge_categories_stat_provisions(category_id, statutory_provision, conn):
-    res = conn.execute("SELECT id from statutory_provision WHERE title = '{0}';".format(statutory_provision))
+    res = conn.execute(text("SELECT id from statutory_provision WHERE title = '{0}';".format(statutory_provision)))
     results = res.fetchall()
     if results is None or len(results) == 0:
         raise Exception("Statutory provision " + statutory_provision + " doesn't exist to insert")
@@ -42,12 +43,12 @@ def insert_into_charge_categories_stat_provisions(category_id, statutory_provisi
             "INSERT INTO charge_categories_stat_provisions (category_id, statutory_provision_id) " \
             "VALUES ({0}, {1}); " \
             "END IF; END $$;".format(category_id, stat_prov_id)
-    conn.execute(query)
+    conn.execute(text(query))
 
 
 def delete_from_charge_categories_stat_provisions(category_id, statutory_provision, conn):
     query = "SELECT id FROM statutory_provision WHERE title = '{0}';".format(statutory_provision)
-    res = conn.execute(query)
+    res = conn.execute(text(query))
     results = res.fetchall()
     if results is None or len(results) == 0:
         raise Exception("Statutory provision" + statutory_provision + " doesn't exist to delete")
@@ -55,12 +56,12 @@ def delete_from_charge_categories_stat_provisions(category_id, statutory_provisi
 
     query = "DELETE FROM charge_categories_stat_provisions WHERE category_id = {0} AND " \
             "statutory_provision_id = {1};".format(category_id, stat_prov_id)
-    conn.execute(query)
+    conn.execute(text(query))
 
 
 def get_charge_category_id(category_name, conn):
     query = "SELECT id FROM charge_categories WHERE name = '{0}';".format(category_name)
-    res = conn.execute(query)
+    res = conn.execute(text(query))
     results = res.fetchall()
     if results is None or len(results) == 0:
         raise Exception(category_name + " does not exist in the DB to be linked")

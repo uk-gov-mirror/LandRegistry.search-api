@@ -11,7 +11,7 @@ revision = '3de2b88f738b'
 down_revision = 'dec5daa38b6c'
 
 from alembic import op
-
+from sqlalchemy.sql import text
 
 statutory_provisions = {
     "Acquisition of Land Act 1981 section 15(6)": 't',
@@ -708,16 +708,16 @@ def load_category(name, display_order, display_name, parent_id, permission):
 
     conn = op.get_bind()
     if parent_id == 'Null':
-        res = conn.execute("select id from charge_categories where name ='{0}' and parent_id is null".format(name, parent_id))
+        res = conn.execute(text("select id from charge_categories where name ='{0}' and parent_id is null".format(name, parent_id)))
     else:
-        res = conn.execute("select id from charge_categories where name ='{0}' and parent_id = {1}".format(name, parent_id))
+        res = conn.execute(text("select id from charge_categories where name ='{0}' and parent_id = {1}".format(name, parent_id)))
     results = res.fetchall()
     return results[0][0]
 
 
 def load_stat_provision_mapping(provision, category_id):
     conn = op.get_bind()
-    res = conn.execute("select id from statutory_provision where title ='{0}'".format(provision.replace("\'", "\'\'")))
+    res = conn.execute(text("select id from statutory_provision where title ='{0}'".format(provision.replace("\'", "\'\'"))))
     results = res.fetchall()
     if results is None or len(results) == 0:
         raise Exception("Provision '{}' does not exits in the DB to be linked".format(provision))
@@ -731,7 +731,7 @@ def load_stat_provision_mapping(provision, category_id):
 
 def load_instrument_mapping(instrument, category_id):
     conn = op.get_bind()
-    res = conn.execute("select id from instruments where name ='{0}'".format(instrument))
+    res = conn.execute(text("select id from instruments where name ='{0}'".format(instrument)))
     results = res.fetchall()
     if results is None or len(results) == 0:
         raise Exception("Instrument '{}' does not exits in the DB to be linked".format(instrument))

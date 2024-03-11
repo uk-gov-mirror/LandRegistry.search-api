@@ -1,5 +1,7 @@
-from flask import current_app, Response
 import json
+
+from flask import Response, current_app
+from werkzeug.exceptions import HTTPException
 
 
 class ApplicationError(Exception):
@@ -29,6 +31,10 @@ class ApplicationError(Exception):
 
 
 def unhandled_exception(e):
+
+    if isinstance(e, HTTPException):
+        return e
+
     current_app.logger.exception('Unhandled Exception: %s', repr(e))
     return ApplicationError("Internal Server Error", 500, 500).response()
 

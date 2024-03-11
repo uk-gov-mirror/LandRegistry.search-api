@@ -1,9 +1,13 @@
-from search_api import main
-from flask_testing import TestCase
-from flask import url_for
-from mock import patch
 from unittest.mock import MagicMock
+
+from flask import url_for
+from flask_testing import TestCase
 from jwt_validation.exceptions import ValidationFailure
+from jwt_validation.models import MaintainClientPrinciple
+from mock import patch
+from search_api import main
+from search_api.config import ALLOW_SENSITIVE_CHARGE_RETRIEVE_USERS
+from unit_tests.utilities_tests import super_test_context
 
 CHARGE_ID = 'LLC-6521'
 INVALID_CHARGE_ID = 'some_invalid_charge_id'
@@ -24,20 +28,27 @@ class TestLocalLandCharge(TestCase):
     @patch('search_api.resources.local_land_charge.model_mappers')
     @patch('search_api.resources.local_land_charge.LocalLandCharge')
     @patch('search_api.resources.local_land_charge.GeometryFeature')
-    def test_get_land_charges_geo_results(self, mock_geo_feature, mock_llc_query, model_mappers_mock, mock_validate):
+    @patch('search_api.resources.local_land_charge.db')
+    def test_get_land_charges_geo_results(self, mock_db, mock_geo_feature, mock_llc_query, model_mappers_mock,
+                                          mock_validate):
         """Should return a 200 status and response should contain charge ids returned by query"""
-        mock_charge = MagicMock()
-        mock_charge.local_land_charge = CHARGE_ID
-        mock_geo_feature.query.filter.return_value.options.return_value.all.return_value = [mock_charge]
+        with super_test_context(main.app):
+            mock_charge = MagicMock()
+            mock_charge.local_land_charge = CHARGE_ID
+            mock_geo_feature.query.filter.return_value.options.return_value.all.return_value = [mock_charge]
 
-        model_mappers_mock.map_llc_result_to_dictionary_list.return_value = [{"woo": CHARGE_ID}]
-        response = self.client.get(url_for(LOCAL_LAND_CHARGES_ROUTE, boundingBox=BASE64_GEO),
-                                   headers={'Authorization': 'Fake JWT'})
+            mock_principle = MagicMock()
+            mock_validate.return_value.principle = mock_principle
+            mock_principle.has_all_permissions.return_value = True
 
-        model_mappers_mock.map_llc_result_to_dictionary_list.assert_called_with([CHARGE_ID])
+            model_mappers_mock.map_llc_result_to_dictionary_list.return_value = [{"woo": CHARGE_ID}]
+            response = self.client.get(url_for(LOCAL_LAND_CHARGES_ROUTE, boundingBox=BASE64_GEO),
+                                       headers={'Authorization': 'Fake JWT'})
 
-        self.assertIn(CHARGE_ID, response.data.decode())
-        self.assertStatus(response, 200)
+            model_mappers_mock.map_llc_result_to_dictionary_list.assert_called_with([CHARGE_ID])
+
+            self.assertIn(CHARGE_ID, response.data.decode())
+            self.assertStatus(response, 200)
 
     @patch('search_api.app.validate')
     @patch('search_api.resources.local_land_charge.model_mappers')
@@ -66,6 +77,29 @@ class TestLocalLandCharge(TestCase):
         self.assertIn('No land charges found', response.data.decode())
         self.assertStatus(response, 404)
 
+    @patch('search_api.resources.local_land_charge.filter_sensitive_charges')
+    @patch('search_api.resources.local_land_charge.model_mappers')
+    @patch('search_api.app.validate')
+    @patch('search_api.resources.local_land_charge.LocalLandCharge')
+    def test_get_land_charges_all_filtered_exception(self, mock_llc_query, mock_validate, model_mappers_mock,
+                                                     mock_sensitive_filter):
+        """Should throw an ApplicationError returning a 404 status if no charge ids where found"""
+        with super_test_context(main.app):
+            mock_llc_query.query.all.return_value = [CHARGE_ID]
+
+            model_mappers_mock.map_llc_result_to_dictionary_list.return_value = [{"woo": CHARGE_ID}]
+
+            mock_principle = MagicMock()
+            mock_validate.return_value.principle = mock_principle
+            mock_principle.has_all_permissions.return_value = False
+
+            mock_sensitive_filter.return_value = []
+
+            response = self.client.get(url_for(LOCAL_LAND_CHARGES_ROUTE), headers={'Authorization': 'Fake JWT'})
+
+            self.assertIn('No land charges found', response.data.decode())
+            self.assertStatus(response, 404)
+
     @patch('search_api.app.validate')
     def test_get_land_charges_failed_decode_exception(self, mock_validate):
         """Should throw an ApplicationError returning a 404 status if no charge ids where found"""
@@ -90,14 +124,14 @@ class TestLocalLandCharge(TestCase):
         is_valid_charge_id_mock.return_value = True
         decode_charge_id_mock.return_value = CHARGE_ID
         llc_query_mock.query.get.return_value = CHARGE_ID
-        model_mappers_mock.map_llc_result_to_dictionary_list.return_value = CHARGE_ID
+        model_mappers_mock.map_llc_charge_display_result_to_dictionary_list.return_value = CHARGE_ID
 
         response = self.client.get(url_for(LOCAL_LAND_CHARGE_ROUTE,
                                            charge_id=CHARGE_ID), headers={'Authorization': 'Fake JWT'})
 
         decode_charge_id_mock.assert_called_with(CHARGE_ID)
         llc_query_mock.query.get.assert_called_with(CHARGE_ID)
-        model_mappers_mock.map_llc_result_to_dictionary_list.assert_called_with(CHARGE_ID)
+        model_mappers_mock.map_llc_charge_display_result_to_dictionary_list.assert_called_with(CHARGE_ID)
 
         self.assertIn(CHARGE_ID, response.data.decode())
         self.assertStatus(response, 200)
@@ -126,6 +160,30 @@ class TestLocalLandCharge(TestCase):
         self.assertIn('No land charges found.', response.data.decode())
         self.assertStatus(response, 404)
 
+    @patch('search_api.resources.local_land_charge.filter_sensitive_charges')
+    @patch('search_api.resources.local_land_charge.model_mappers')
+    @patch('search_api.app.validate')
+    @patch('search_api.resources.local_land_charge.is_valid_charge_id')
+    @patch('search_api.resources.local_land_charge.LocalLandCharge')
+    def test_get_land_charge_with_result_filtered_out(self, llc_query_mock, is_valid_charge_id_mock, mock_validate,
+                                                      model_mappers_mock, mock_sensitive_filter):
+        """Should throw an ApplicationError returning a status of 404 if no charges with the given id where found"""
+        with super_test_context(main.app):
+            is_valid_charge_id_mock.return_value = True
+            llc_query_mock.query.get.return_value = CHARGE_ID
+            model_mappers_mock.map_llc_charge_display_result_to_dictionary_list.return_value = CHARGE_ID
+
+            mock_principle = MagicMock()
+            mock_validate.return_value.principle = mock_principle
+            mock_principle.has_all_permissions.return_value = False
+
+            mock_sensitive_filter.return_value = []
+
+            response = self.client.get(url_for(LOCAL_LAND_CHARGE_ROUTE,
+                                               charge_id=CHARGE_ID), headers={'Authorization': 'Fake JWT'})
+            self.assertIn('No land charges found.', response.data.decode())
+            self.assertStatus(response, 404)
+
     def test_get_no_token(self):
         """Should return 401 with no auth token"""
         response = self.client.get(url_for(LOCAL_LAND_CHARGE_ROUTE,
@@ -139,3 +197,31 @@ class TestLocalLandCharge(TestCase):
         response = self.client.get(url_for(LOCAL_LAND_CHARGE_ROUTE,
                                            charge_id=CHARGE_ID), headers={'Authorization': 'Fake JWT'})
         self.assertStatus(response, 401)
+
+    @patch('search_api.resources.local_land_charge.filter_sensitive_charges')
+    @patch('search_api.resources.local_land_charge.model_mappers')
+    @patch('search_api.app.validate')
+    @patch('search_api.resources.local_land_charge.is_valid_charge_id')
+    @patch('search_api.resources.local_land_charge.LocalLandCharge')
+    def test_get_land_charge_user_allowed_user_no_filter(self, llc_query_mock, is_valid_charge_id_mock, mock_validate,
+                                                         model_mappers_mock, mock_sensitive_filter):
+        """Should throw an ApplicationError returning a status of 404 if no charges with the given id where found"""
+        with super_test_context(main.app):
+            is_valid_charge_id_mock.return_value = True
+            llc_query_mock.query.get.return_value = CHARGE_ID
+            model_mappers_mock.map_llc_charge_display_result_to_dictionary_list.return_value = CHARGE_ID
+
+            mock_principle = MagicMock(spec=MaintainClientPrinciple)
+            mock_validate.return_value.principle = mock_principle
+            mock_principle.has_all_permissions.return_value = False
+            mock_principle.role = ALLOW_SENSITIVE_CHARGE_RETRIEVE_USERS[0]
+            mock_principle.organisation = ALLOW_SENSITIVE_CHARGE_RETRIEVE_USERS[1]
+
+            mock_sensitive_filter.return_value = []
+
+            response = self.client.get(url_for(LOCAL_LAND_CHARGE_ROUTE,
+                                               charge_id=CHARGE_ID), headers={'Authorization': 'Fake JWT'})
+            self.assertIn(CHARGE_ID, response.data.decode())
+            self.assertStatus(response, 200)
+
+            mock_sensitive_filter.assert_not_called()

@@ -10,9 +10,9 @@ Create Date: 2018-06-07 10:16:12.182839
 revision = '441441c32014'
 down_revision = '7cba93b9ff46'
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
+from sqlalchemy.sql import text
 
 # Categories to be removed in upgrade
 LISTED_BUILDING_CPC = 'Listed building conditional planning consent'
@@ -105,7 +105,7 @@ def get_charge_category_id_by_name(category_name, is_parent, conn):
     else:
         query = "SELECT id FROM charge_categories WHERE name = '{}'".format(category_name)
 
-    res = conn.execute(query)
+    res = conn.execute(text(query))
 
     results = res.fetchall()
     if results is None or len(results) == 0:
@@ -138,9 +138,9 @@ def insert_category(name, display_name, parent_id, display_order):
 
 
 def delete_category(category, conn):
-    res = conn.execute("SELECT id, display_order, parent_id "
+    res = conn.execute(text("SELECT id, display_order, parent_id "
                        "FROM charge_categories "
-                       "WHERE name = '{}'".format(category))
+                       "WHERE name = '{}'".format(category)))
 
     results = res.fetchall()
     if results is None or len(results) == 0:
@@ -160,9 +160,9 @@ def delete_category(category, conn):
 
 
 def update_category_display_order(category, parent_id, new_display_order, conn):
-    res = conn.execute("SELECT id, display_order "
+    res = conn.execute(text("SELECT id, display_order "
                        "FROM charge_categories "
-                       "WHERE name = '{}' AND parent_id = {}".format(category, parent_id))
+                       "WHERE name = '{}' AND parent_id = {}".format(category, parent_id)))
 
     results = res.fetchall()
     if results is None or len(results) == 0:

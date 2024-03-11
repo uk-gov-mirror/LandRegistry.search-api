@@ -1,10 +1,12 @@
 from unittest import TestCase
 from unittest.mock import patch
+
 from search_api.constants.charge_id import ChargeId
 from search_api.exceptions import ApplicationError
-from search_api.utilities.charge_id \
-    import is_valid_charge_id, encode_charge_id, decode_charge_id, add_prefix, remove_prefix, encode_base_31, \
-    decode_base_31
+from search_api.utilities.charge_id import (add_prefix, decode_base_31,
+                                            decode_charge_id, encode_base_31,
+                                            encode_charge_id,
+                                            is_valid_charge_id, remove_prefix)
 
 EXPECTED_ENCODED_MAX_LENGTH = 6
 DECODED_INTEGER = 56745

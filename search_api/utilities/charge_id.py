@@ -1,6 +1,7 @@
+import re
+
 from search_api.constants.charge_id import ChargeId
 from search_api.exceptions import ApplicationError
-import re
 
 
 # TODO(This service is duplicated in the maintain-api any changes here should be mirrored there.)

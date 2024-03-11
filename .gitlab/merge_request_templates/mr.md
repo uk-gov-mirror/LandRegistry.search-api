@@ -5,6 +5,7 @@
 ## Mandatory
 * [ ]  Unit tests are all passing
 * [ ]  No flake8 linting violations
+* [ ]  Requirements and dependencies have been updated
 
 ## If applicable
 * [ ]  Swagger spec updated

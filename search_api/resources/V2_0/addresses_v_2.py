@@ -1,12 +1,14 @@
+import base64
 import json
 import re
 
-from flask import Blueprint, current_app, g, Response
-
+from flask import Blueprint, Response, current_app, g
+from flask.globals import request
 from search_api import config
+from search_api.dependencies.index_map_api import (
+    search_for_index_map, search_for_index_map_by_title_no)
 from search_api.exceptions import ApplicationError
 from search_api.utilities.V2_0 import address_response_mapper_v_2
-from flask.globals import request
 
 addresses_V_2 = Blueprint('addresses_V_2', __name__, url_prefix='/v2.0/search/addresses')
 
@@ -20,12 +22,16 @@ body = {
 postcode_regex_check = '^([Gg][Ii][Rr] 0[Aa]{2})|((([A-Za-z][0-9]{1,2})|(([A-Za-z][A-Ha-hJ-Yj-y][0-9]{1,2})' \
                        '|(([A-Za-z][0-9][A-Za-z])|([A-Za-z][A-Ha-hJ-Yj-y][0-9]?[A-Za-z])))) [0-9][A-Za-z]{2})$'
 
-uprn_regex_check = '^[0-9]{6,12}$'
-usrn_regex_check = '^\d+$'
+uprn_regex_check = r'^[0-9]{1,13}$'
+usrn_regex_check = r'^\d+$'
 
 
 @addresses_V_2.route('/postcode/<postcode>', methods=['GET'])
 def get_addresses_by_postcode(postcode):
+    is_base64 = request.args.get('base64')
+    if is_base64 and is_base64.upper() == "TRUE":
+        postcode = base64.urlsafe_b64decode(postcode).decode('UTF8')
+
     current_app.logger.info("Get address by postcode '%s'", postcode)
     postcode = postcode.strip()
     postcode_is_valid = re.match(postcode_regex_check, postcode)
@@ -40,6 +46,10 @@ def get_addresses_by_postcode(postcode):
 
 @addresses_V_2.route('/uprn/<uprn>', methods=['GET'])
 def get_addresses_by_uprn(uprn):
+    is_base64 = request.args.get('base64')
+    if is_base64 and is_base64.upper() == "TRUE":
+        uprn = base64.urlsafe_b64decode(uprn).decode('UTF8')
+
     current_app.logger.info("Get address by UPRN '%s'", uprn)
     uprn = uprn.strip()
     uprn_is_valid = re.match(uprn_regex_check, uprn)
@@ -54,6 +64,11 @@ def get_addresses_by_uprn(uprn):
 
 @addresses_V_2.route('/usrn/<usrn>', methods=['GET'])
 def get_addresses_by_usrn(usrn):
+    is_base64 = request.args.get('base64')
+    postcode = request.args.get('value_2')
+    if is_base64 and is_base64.upper() == "TRUE":
+        usrn = base64.urlsafe_b64decode(usrn).decode('UTF8')
+
     current_app.logger.info("Get address by USRN '%s'", usrn)
     usrn = usrn.strip()
     usrn_is_valid = re.match(usrn_regex_check, usrn)
@@ -61,6 +76,8 @@ def get_addresses_by_usrn(usrn):
     if usrn_is_valid is not None:
         body["search_type"] = "usrn"
         body["query_value"] = int(usrn)
+        if postcode:
+            body['query_value_2'] = postcode
         return search_for_addresses(body)
     else:
         raise ApplicationError("Unprocessable Entity: USRN is not valid", 422, 422)
@@ -68,6 +85,10 @@ def get_addresses_by_usrn(usrn):
 
 @addresses_V_2.route('/text/<text>', methods=['GET'])
 def get_addresses_by_text(text):
+    is_base64 = request.args.get('base64')
+    if is_base64 and is_base64.upper() == "TRUE":
+        text = base64.urlsafe_b64decode(text).decode('UTF8')
+
     current_app.logger.info("Get address by text '%s'", text)
     text = text.strip()
 
@@ -75,6 +96,35 @@ def get_addresses_by_text(text):
     body["query_value"] = text
 
     return search_for_addresses(body)
+
+
+@addresses_V_2.route('/title/<title>', methods=['GET'])
+def get_index_map_by_title(title):
+    is_base64 = request.args.get('base64')
+    if is_base64 and is_base64.upper() == "TRUE":
+        title = base64.urlsafe_b64decode(title).decode('UTF8')
+
+    current_app.logger.info("Get index map by title '{}'".format(title))
+    title = title.strip()
+
+    search_results = search_for_index_map_by_title_no(title)
+
+    if search_results.status_code == 200:
+        index_map_json = search_results.json()
+        index_map = {"type": "FeatureCollection",
+                     "features": index_map_json['features']}
+    elif search_results.status_code == 404:
+        current_app.logger.warning("No index map found for title search")
+        raise ApplicationError("No index map found for title search", 404, 404)
+    else:
+        current_app.logger.exception("Failed to retrieve index map")
+        raise ApplicationError(search_results.json(), 500, 500)
+
+    return Response(
+        response=json.dumps(index_map),
+        status=200,
+        mimetype="application/json"
+    )
 
 
 def search_for_addresses(request_body):
@@ -96,7 +146,11 @@ def search_for_addresses(request_body):
     if request.args.get('index_map') and request.args.get('index_map').lower() == 'true' and config.INDEX_MAP_API_URL:
         for address in mapped_resp:
             if 'uprn' in address and address['uprn']:
-                index_map = search_for_index_map(address['uprn'])
+                index_map = None
+                try:
+                    index_map = search_for_index_map(address['uprn'])
+                except Exception:
+                    current_app.logger.exception("Failed to retrieve index map")
                 if index_map:
                     address['index_map'] = index_map
 
@@ -106,29 +160,3 @@ def search_for_addresses(request_body):
         status=200,
         mimetype="application/json"
     )
-
-
-def search_for_index_map(uprn):
-    current_app.logger.info("Performing uprn title search")
-
-    title_resp = g.requests.get('{}/v1/uprns/{}'.format(config.INDEX_MAP_API_URL, uprn),
-                                headers={"Content-Type": "application/json", "Accept": "application/json"})
-    if title_resp.status_code == 200:
-        features = []
-        for title in title_resp.json():
-            current_app.logger.info("Performing index map search")
-            index_map_resp = g.requests.get(
-                '{}/v1/index_map/{}'.format(config.INDEX_MAP_API_URL, title),
-                headers={"Content-Type": "application/json", "Accept": "application/json"})
-            if index_map_resp.status_code == 200:
-                index_map_json = index_map_resp.json()
-                features = features + index_map_json['features']
-            elif index_map_resp.status_code != 404:
-                raise ApplicationError(index_map_resp.json(), 500, 500)
-        if features:
-            return {"type": "FeatureCollection",
-                    "features": features}
-    elif title_resp.status_code != 404:
-        raise ApplicationError(title_resp.json(), 500, 500)
-
-    return None

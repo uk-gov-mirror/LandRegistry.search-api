@@ -1,8 +1,8 @@
--- Create search_api_db database
-CREATE DATABASE search_api_db;
+-- Create llc_register database
+CREATE DATABASE llc_register;
 
---Create user for search_api_db DB
-CREATE ROLE search_api_db_user with LOGIN password 'password';
+--Create user for llc_register DB
+CREATE ROLE llc_register_user with LOGIN password 'llc_register_password';
 
-\c search_api_db;
+\c llc_register;
 CREATE EXTENSION postgis;

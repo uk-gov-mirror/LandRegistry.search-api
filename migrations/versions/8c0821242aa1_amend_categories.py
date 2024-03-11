@@ -10,8 +10,9 @@ Create Date: 2018-05-09 14:20:35.126375
 revision = '8c0821242aa1'
 down_revision = '3de2b88f738b'
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
+from sqlalchemy.sql import text
 
 # Categories to be added in upgrade
 MODIFICATION_RECTIFICATION_ORDERS = 'Modification / rectification orders'
@@ -83,7 +84,7 @@ def get_charge_category_id_by_name(category_name, is_parent, conn):
     else:
         query = "SELECT id FROM charge_categories WHERE name = '{}'".format(category_name)
 
-    res = conn.execute(query)
+    res = conn.execute(text(query))
 
     results = res.fetchall()
     if results is None or len(results) == 0:
@@ -93,7 +94,7 @@ def get_charge_category_id_by_name(category_name, is_parent, conn):
 
 
 def link_category_and_stat_prov(category_id, stat_prov, conn):
-    res = conn.execute("SELECT id FROM statutory_provision WHERE title = '{}'".format(stat_prov))
+    res = conn.execute(text("SELECT id FROM statutory_provision WHERE title = '{}'".format(stat_prov)))
     results = res.fetchall()
     if results is None or len(results) == 0:
         raise Exception("Unable to retrieve statutory provision with title '{}'".format(stat_prov))
@@ -110,7 +111,7 @@ def link_category_and_stat_prov(category_id, stat_prov, conn):
 
 
 def link_category_and_instrument(category_id, instrument, conn):
-    res = conn.execute("SELECT id FROM instruments WHERE name = '{}'".format(instrument))
+    res = conn.execute(text("SELECT id FROM instruments WHERE name = '{}'".format(instrument)))
     results = res.fetchall()
     if results is None or len(results) == 0:
         raise Exception("Unable to retrieve instrument with name '{}'".format(instrument))
@@ -155,9 +156,9 @@ def insert_category(name, display_name, parent_id, display_order, permission):
 
 
 def delete_category(category, conn):
-    res = conn.execute("SELECT id, display_order, parent_id "
+    res = conn.execute(text("SELECT id, display_order, parent_id "
                        "FROM charge_categories "
-                       "WHERE name = '{}'".format(category))
+                       "WHERE name = '{}'".format(category)))
 
     results = res.fetchall()
     if results is None or len(results) == 0:

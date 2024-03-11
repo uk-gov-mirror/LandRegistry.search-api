@@ -1,0 +1,1463 @@
+swagger: '2.0'
+info:
+  version: 0.0.1
+  title: Search API
+paths:
+  /v2.0/search/local_land_charges:
+    get:
+      summary: "Get local land charges"
+      description: "Get local land charges by filter search"
+      parameters:
+      - name: furtherInformationReference
+        in: query
+        type: string
+        required: false
+        description: Further Information Reference of the charge to be returned
+      - name: authority_charge_id
+        in: query
+        type: string
+        required: false
+        description: Authority Charge ID of a charge to be found, must be used with migrating_authority
+      - name: migrating_authority
+        in: query
+        type: string
+        required: false
+        description: Migrating Authority of a charge to be found, must be used with authority_charge_id
+      responses:
+        200:
+          description: Search Successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/local_land_charge'
+        400:
+          description: No filters provided
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Failed to provide a filter.
+              error_code:
+                type: number
+                example: 400
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No land charges found
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+    post:
+      summary: Search for land charges by geographic information
+      description: Search for land charges by geographic information
+      parameters:
+        - name: Search
+          in: body
+          schema:
+            type: object
+            properties:
+              coordinates:
+                type: array
+                items:
+                  type: array
+                  description: Polygon GeoJSon geometry
+                  items:
+                    type: array
+                    description: GeoJSon 2D Point
+                    minItems: 2
+                    maxItems: 2
+                    items:
+                      type: number
+              type:
+                type: string
+                enum:
+                - 'Polygon'
+                - 'MultiPolygon'
+              crs:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  properties:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+        - name: filter
+          in: query
+          type: string
+          required: false
+          description: String indicating whether to filter out cancelled charge
+        - name: maxResults
+          in: query
+          type: string
+          required: false
+          description: Maximum number of results, defaults to 1000 if not provided
+        - name: filter_sensitive_geometry
+          in: query
+          type: boolean
+          required: false
+          description: Boolean to indicate whether to return sensitive charges or not
+        - name: schema_version
+          in: query
+          type: string
+          required: false
+          description: Schema version for the returned search results
+
+      responses:
+        200:
+          description: Search Successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/local_land_charge_alt'
+        400:
+          description: Bad request
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Failed to provide a search area
+              error_code:
+                type: number
+                example: 400
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No land charges found
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+        507:
+          description: Too many results
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Too many charges, search a smaller area
+              error_code:
+                type: number
+                example: 507
+
+  /v2.0/search/local_land_charges/thresholds:
+    post:
+      summary: Search for land charges by geographic information but filter by thresholds for adjoining charges
+      description: Search for land charges by geographic information but filter by thresholds for adjoining charges
+      parameters:
+        - name: Payload
+          in: body
+          schema:
+            type: object
+            properties:
+              geojson:
+                type: object
+                properties:
+                  coordinates:
+                    type: array
+                    items:
+                      type: array
+                      description: Polygon GeoJSon geometry
+                      items:
+                        type: array
+                        description: GeoJSon 2D Point
+                        minItems: 2
+                        maxItems: 2
+                        items:
+                          type: number
+                  type:
+                    type: string
+                    enum:
+                    - 'Polygon'
+                    - 'MultiPolygon'
+                  crs:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      properties:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+              percentage_threshold:
+                type: number
+                description: The largest percentage of overlap for a charge to be considered adjoining
+                example: 5
+              area_threshold:
+                type: number
+                description: The largest area (in square metres) of overlap for a charge to be considered adjoining
+                example: 2
+        - name: filter
+          in: query
+          type: string
+          required: false
+          description: String indicating whether to filter out cancelled charge
+        - name: maxResults
+          in: query
+          type: string
+          required: false
+          description: Maximum number of results, defaults to 1000 if not provided
+        - name: filter_sensitive_geometry
+          in: query
+          type: boolean
+          required: false
+          description: Boolean to indicate whether to return sensitive charges or not
+
+      responses:
+        200:
+          description: Search Successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/local_land_charge_alt'
+        400:
+          description: Bad request
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Failed to provide a search area
+              error_code:
+                type: number
+                example: 400
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No land charges found
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+        507:
+          description: Too many results
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Too many charges, search a smaller area
+              error_code:
+                type: number
+                example: 507
+
+  /v2.0/search/local_land_charges/collect_extents:
+    post:
+      summary: Return the collected extents of a given list of charge ID, also return valid and invalid IDs
+      parameters:
+        - name: Payload
+          in: body
+          schema:
+            type: object
+            properties:
+              charge_ids:
+                type: array
+                items:
+                  type: string
+
+      responses:
+        200:
+          description: Successful
+          schema:
+            type: object
+            properties:
+              invalid_charge_ids:
+                type: array
+                items:
+                  type: string
+              valid_charge_ids:
+                type: array
+                items:
+                  type: string
+              collected_extents:
+                type: object
+                description: Collected extents of all the requested valid charge IDs
+        400:
+          description: Bad request
+        500:
+          description: Server error
+
+  /v2.0/search/local_land_charges/charge_types:
+    post:
+      summary: Retrieve charge types for a given set of charge IDs
+      parameters:
+        - name: Payload
+          in: body
+          schema:
+            type: object
+            properties:
+              charge_ids:
+                type: array
+                items:
+                  type: string
+
+      responses:
+        200:
+          description: Search Successful
+          schema:
+            type: object
+            properties:
+              invalid_charge_ids:
+                type: array
+                items:
+                  type: string
+              valid_charges:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    local_land_charge:
+                      type: string
+                    category:
+                      type: string
+                    sub_category:
+                      type: string
+        400:
+          description: Bad request
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Failed to provide a search area
+              error_code:
+                type: number
+                example: 400
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+                
+  /v2.0/search/local_land_charges/correlations:
+    post:
+      summary: Retrieve correlation information for a given set of charge IDs
+      parameters:
+        - name: Payload
+          in: body
+          schema:
+            type: object
+            properties:
+              charge_ids:
+                type: array
+                items:
+                  type: string
+
+      responses:
+        200:
+          description: Search Successful
+          schema:
+            type: object
+            properties:
+              invalid_charge_ids:
+                type: array
+                items:
+                  type: string
+              charge_correlations:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    originating_authority_charge_identifier:
+                      type: string
+                    migration_partner_code:
+                      type: string
+                    local_land_charge:
+                      type: string
+                    version_id:
+                      type: integer
+        400:
+          description: Bad request
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Failed to provide a search area
+              error_code:
+                type: number
+                example: 400
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+  /v2.0/search/addresses/postcode/{postcode}:
+    get:
+      summary: Get addresses by postcode
+      description: Get addresses by postcode
+      parameters:
+      - name: postcode
+        in: path
+        type: string
+        required: true
+        description: Postcode to search on
+      - name: base64
+        in: query
+        type: string
+        required: false
+        description: if "true" postcode will be safely decoded in base64
+      responses:
+        200:
+          description: Search successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/mapped_address'
+        400:
+          description: Invalid postcode format
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Invalid input
+              error_code:
+                type: number
+                example: 400
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No addresses found for search
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+  /v2.0/search/addresses/uprn/{uprn}:
+    get:
+      summary: Get addresses by uprn
+      description: Get addresses by uprn
+      parameters:
+      - name: uprn
+        in: path
+        type: string
+        required: true
+        description: UPRN to search on
+      - name: base64
+        in: query
+        type: string
+        required: false
+        description: if "true" uprn will be safely decoded in base64
+      responses:
+        200:
+          description: Search successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/mapped_address'
+        400:
+          description: Invalid postcode format
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Invalid input
+              error_code:
+                type: number
+                example: 400
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No addresses found for search
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+  /v2.0/search/addresses/usrn/{usrn}:
+    get:
+      summary: Get addresses by usrn
+      description: Get addresses by usrn
+      parameters:
+      - name: usrn
+        in: path
+        type: string
+        required: true
+        description: USRN to search on
+      - name: base64
+        in: query
+        type: string
+        required: false
+        description: if "true" usrn will be safely decoded in base64
+      responses:
+        200:
+          description: Search successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/mapped_address'
+        400:
+          description: Invalid postcode format
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Invalid input
+              error_code:
+                type: number
+                example: 400
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No addresses found for search
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+  /v2.0/search/addresses/text/{text}:
+    get:
+      summary: Get addresses by text
+      description: Get addresses by text
+      parameters:
+      - name: text
+        in: path
+        type: string
+        required: true
+        description: Text to search on
+      - name: base64
+        in: query
+        type: string
+        required: false
+        description: if "true" text will be safely decoded in base64
+      responses:
+        200:
+          description: Search successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/mapped_address'
+        400:
+          description: Invalid postcode format
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Invalid input
+              error_code:
+                type: number
+                example: 400
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No addresses found for search
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+  /v2.0/search/addresses/title/{title}:
+    get:
+      summary: Get index map by title
+      description: Get index map by title
+      parameters:
+        - name: title
+          in: path
+          type: string
+          required: true
+          description: title to search on
+        - name: base64
+          in: query
+          type: string
+          required: false
+          description: if "true" title will be safely decoded in base64
+      responses:
+        200:
+          description: Search successful
+          schema:
+            $ref: '#/definitions/FeatureCollection'
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No index map found for title search
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+  /v2.0/categories:
+    get:
+      summary: "Get all categories"
+      description: "Get all categories"
+      responses:
+        200:
+          description: "Successful"
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Planning
+                display-name:
+                  type: string
+                  example: planning
+                permission:
+                  type: string
+                  example: null
+                vary-cancel-permission:
+                  type: string
+                  example: null
+                selectable:
+                  type: boolean
+                  example: true
+  /v2.0/search/categories/{category}:
+    get:
+      summary: Get latest category name
+      description: Get display name for a historic category name
+      parameters:
+      - name: category
+        in: path
+        type: string
+        required: true
+        description: Old category name
+      responses:
+        200:
+          description: Search successful
+          schema:
+            type: object
+            properties:
+              display-name:
+                type: string
+                example: latest name
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Category 'xxx' not found
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+  /v2.0/search/categories/{category}/sub-categories/{sub_category}:
+    get:
+      summary: Get latest sub-category name
+      description: Get display name for a historic sub-category name
+      parameters:
+      - name: category
+        in: path
+        type: string
+        required: true
+        description: Category name, can either be old name or up-to-date
+      - name: sub_category
+        in: path
+        type: string
+        required: true
+        description: Old sub-category name
+      responses:
+        200:
+          description: Search successful
+          schema:
+            type: object
+            properties:
+              display-name:
+                type: string
+                example: latest name
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Sub-category 'yyy' not found for parent 'xxx'
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+  /search/local_land_charges:
+    get:
+      summary: "Get local land charges"
+      description: "Get local land charges"
+      parameters:
+      - name: boundingBox
+        in: query
+        type: string
+        required: false
+        description: Base64 encoded extent that results should appear in
+      responses:
+        200:
+          description: Search Successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/land_charge'
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No land charges found
+              error_code:
+                type: number
+                example: 404
+        422:
+          description: Unable to decode bounding box
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Unprocessable Entity. Incorrect padding
+              error_code:
+                type: number
+                example: 422
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+  /search/local_land_charges/{charge_id}:
+    get:
+      summary: Get local land charge
+      description: Get local land charge
+      parameters:
+      - name: charge_id
+        in: path
+        type: string
+        required: true
+        description: Charge ID e.g. LLC-52
+      responses:
+        200:
+          description: Search successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/land_charge'
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No land charges found
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+  /search/local_land_charges/{charge_id}/history:
+    get:
+      summary: Get local land charge history
+      description: Get local land charge history
+      parameters:
+      - name: charge_id
+        in: path
+        type: string
+        required: true
+        description: Charge ID e.g. LLC-52
+      responses:
+        200:
+          description: Search successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/charge-history'
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No land charges found
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+  /search/addresses/postcode/{postcode}:
+    get:
+      summary: Get addresses by postcode
+      description: Get addresses by postcode
+      parameters:
+      - name: postcode
+        in: path
+        type: string
+        required: true
+        description: Postcode to search on
+      - name: base64
+        in: query
+        type: string
+        required: false
+        description: if "true" postcode will be safely decoded in base64
+      responses:
+        200:
+          description: Search successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/mapped_address'
+        400:
+          description: Invalid postcode format
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Invalid input
+              error_code:
+                type: number
+                example: 400
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No addresses found for search
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+  /search/addresses/uprn/{uprn}:
+    get:
+      summary: Get addresses by uprn
+      description: Get addresses by uprn
+      parameters:
+      - name: uprn
+        in: path
+        type: string
+        required: true
+        description: UPRN to search on
+      - name: base64
+        in: query
+        type: string
+        required: false
+        description: if "true" uprn will be safely decoded in base64
+      responses:
+        200:
+          description: Search successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/mapped_address'
+        400:
+          description: Invalid postcode format
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Invalid input
+              error_code:
+                type: number
+                example: 400
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No addresses found for search
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+  /search/addresses/usrn/{usrn}:
+    get:
+      summary: Get addresses by usrn
+      description: Get addresses by usrn
+      parameters:
+      - name: usrn
+        in: path
+        type: string
+        required: true
+        description: USRN to search on
+      - name: base64
+        in: query
+        type: string
+        required: false
+        description: if "true" usrn will be safely decoded in base64
+      responses:
+        200:
+          description: Search successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/mapped_address'
+        400:
+          description: Invalid postcode format
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Invalid input
+              error_code:
+                type: number
+                example: 400
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No addresses found for search
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+  /search/addresses/text/{text}:
+    get:
+      summary: Get addresses by text
+      description: Get addresses by text
+      parameters:
+      - name: text
+        in: path
+        type: string
+        required: true
+        description: Text to search on
+      - name: base64
+        in: query
+        type: string
+        required: false
+        description: if "true" text will be safely decoded in base64
+      responses:
+        200:
+          description: Search successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/mapped_address'
+        400:
+          description: Invalid postcode format
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Invalid input
+              error_code:
+                type: number
+                example: 400
+        404:
+          description: No results found
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: No addresses found for search
+              error_code:
+                type: number
+                example: 404
+        500:
+          description: Server error
+          schema:
+            type: object
+            properties:
+              error_message:
+                type: string
+                example: Something went wrong
+              error_code:
+                type: number
+                example: 500
+
+
+security:
+  - JWTAuth: []
+
+securityDefinitions:
+  JWTAuth:
+    type: apiKey
+    in: header
+    name: Authorizaton
+
+definitions:
+
+  local_land_charge:
+    type: object
+    properties:
+      id:
+        type: number
+        example: 1234
+      display-id:
+        type: string
+        example: LLC-R2D2
+      geometry:
+        $ref: '#/definitions/FeatureCollection'
+      type:
+        type: string
+        example: Planning
+      item:
+        $ref: '#/definitions/local_land_charge_item'
+      cancelled:
+        type: boolean
+        example: false
+      entry_number:
+        type: number
+        example: 15
+
+  local_land_charge_alt:
+    type: object
+    properties:
+      id:
+        type: number
+        example: 1234
+      display-id:
+        type: string
+        example: LLC-R2D2
+      geometry:
+        $ref: '#/definitions/FeatureCollection'
+      type:
+        type: string
+        example: Planning
+      charge-sub-category:
+        type: string
+        example: Tree preservation order (TPO)
+      item:
+        $ref: '#/definitions/local_land_charge_item'
+      cancelled:
+        type: boolean
+        example: false
+      adjoining:
+        type: boolean
+        example: false
+
+  local_land_charge_item:
+    type: object
+    properties:
+      author:
+        $ref: '#/definitions/author'
+      geometry:
+        $ref: '#/definitions/FeatureCollection'
+      start-date:
+        type: string
+        example: 2020-04-03
+      charge-type:
+        type: string
+        example: Planning
+      schema-version:
+        type: string
+        example: 11.0
+      local-land-charge:
+        type: number
+        example: 1234
+      registration-date:
+        type: string
+        example: 2020-04-03
+      charge-sub-category:
+        type: string
+        example: Tree preservation order (TPO)
+      statutory-provision:
+        type: string
+        example: Town and Country Planning Act 1990 section 198
+      originating-authority:
+        type: string
+        example: HM Land Registry
+      further-information-location:
+        type: string
+        example: filestore X1-D
+      instrument:
+        type: string
+      charge-geographic-description:
+        type: string
+        example: a small tree in a hole
+
+  land_charge:
+    type: object
+    properties:
+      type:
+        type: string
+      item:
+        type: object
+        properties:
+          charge-type:
+            type: string
+            example: Planning
+          further-information-location:
+            type: string
+          author:
+            $ref: '#/definitions/author'
+          originating-authority:
+            type: string
+          registration-date:
+            type: string
+          instrument:
+            type: string
+          statutory-provision:
+            type: string
+          charge-geographic-description:
+            type: string
+          local-land-charge:
+            type: number
+          geometry:
+            $ref: '#/definitions/FeatureCollection'
+          start-date:
+            type: string
+      id:
+        type: number
+      cancelled:
+        type: boolean
+      adjoining:
+        type: boolean
+      display-id:
+        type: string
+      geometry:
+        type: object
+        properties:
+          type:
+            type: string
+          features:
+            type: array
+            items:
+              type: object
+              properties:
+                type:
+                  type: string
+                geometry:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    coordinates:
+                      type: object
+                properties:
+                  type: object
+                  properties:
+                    id:
+                      type: number
+      entry_number:
+        type: number
+
+  charge-history:
+    type: object
+    properties:
+      entry-number:
+        type: number
+        example: 12345
+      cancelled:
+        type: boolean
+        example: false
+      entry-timestamp:
+        type: string
+        example: "2017-07-17T13:16:59.886789"
+      author:
+        $ref: '#/definitions/author'
+
+  author:
+    type: object
+    properties:
+      organisation:
+        type: string
+        example: "HM Land Registry"
+      full-name:
+        type: string
+        example: "Joe Bloggs"
+      email:
+        type: string
+        example: "joe@bloggs.com"
+
+  FeatureCollection:
+    description: GeoJSON FeatureCollection
+    type: object
+    properties:
+      type:
+        type: string
+        enum:
+        - 'FeatureCollection'
+      features:
+        type: array
+        items:
+          $ref: '#/definitions/Feature'
+
+  Feature:
+    description: GeoJSON Feature
+    type: object
+    properties:
+      geometry:
+        $ref: '#/definitions/Polygon'
+      properties:
+        type: object
+        properties:
+          id:
+            type: integer
+      type:
+        type: string
+        enum:
+        - 'Feature'
+
+  Point2D:
+    type: array
+    description: 2D point
+    minItems: 2
+    maxItems: 2
+    items:
+      type: number
+
+  Polygon:
+    type: object
+    description: GeoJSON polygon
+    properties:
+      coordinates:
+        type: array
+        items:
+          type: array
+          items:
+            $ref: '#/definitions/Point2D'
+      type:
+        type: string
+        enum:
+        - 'Polygon'
+
+  mapped_address:
+    description: GeoJSON Feature
+    type: object
+    properties:
+      address_type:
+        type: string
+        example: property
+      address:
+        type: string
+        example: 1 Test street, Town, County, TT1 1TT
+      geometry:
+        $ref: '#/definitions/FeatureCollection'
+      postcode:
+        type: string
+        example: TT1 1TT
+      uprn:
+        type: string
+        example: 123ABC
+      line_1:
+        type: string
+      line_2:
+        type: string
+      line_3:
+        type: string
+      line_4:
+        type: string
+      line_5:
+        type: string
+      line_6:
+        type: string
+      street:
+        type: string
+      town:
+        type: string

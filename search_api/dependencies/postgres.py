@@ -1,5 +1,5 @@
-from flask import current_app
 import psycopg2
+from flask import current_app
 from search_api.exceptions import ApplicationError
 
 

@@ -1,8 +1,8 @@
-from search_api.dependencies import postgres
-from flask import request, Blueprint, Response, g
-from flask import current_app
-import json
 import datetime
+import json
+
+from flask import Blueprint, Response, current_app, g, request
+from search_api.dependencies import postgres
 
 general = Blueprint('general', __name__)
 
@@ -12,7 +12,7 @@ def check_status():
     return Response(response=json.dumps({
         "app": current_app.config["APP_NAME"],
         "status": "OK",
-        "headers": request.headers.to_list(),
+        "headers": request.headers.to_wsgi_list(),
         "commit": current_app.config["COMMIT"]
     }), mimetype='application/json', status=200)
 
@@ -102,7 +102,7 @@ def cascade_health(str_depth):  # pragma: no cover
         "server_timestamp": str(datetime.datetime.now()),
         "app": current_app.config.get("APP_NAME"),
         "status": "UNKNOWN",
-        "headers": request.headers.to_list(),
+        "headers": request.headers.to_wsgi_list(),
         "commit": current_app.config.get("COMMIT"),
         "db": dbs,
         "services": services

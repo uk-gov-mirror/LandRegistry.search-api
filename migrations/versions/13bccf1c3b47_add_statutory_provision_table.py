@@ -10,8 +10,8 @@ Create Date: 2017-03-16 11:54:06.135132
 revision = '13bccf1c3b47'
 down_revision = '7efb0a3f9a39'
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from flask import current_app
 
 

@@ -1,16 +1,17 @@
 import collections
-from flask import ctx
-from flask import g
-from flask import request
-from flask_logconfig import LogConfig
-from flask_sqlalchemy import SQLAlchemy
 import json
 import logging
 import traceback
 
+from flask import ctx, g, request
+from flask_logconfig import LogConfig
+from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
+
 # Create empty extension objects here
 logger = LogConfig()
 db = SQLAlchemy()
+migrate = Migrate()
 
 
 def register_extensions(app):
@@ -25,6 +26,9 @@ def register_extensions(app):
 
     # Database
     db.init_app(app)
+
+    # Migrate
+    migrate.init_app(app, db)
 
     # All done!
     app.logger.info("Extensions registered")

@@ -10,8 +10,8 @@ Create Date: 2018-10-04 11:17:58.840747
 revision = 'f5bece98f1a1'
 down_revision = '2ede2fa7ea8a'
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 provision_list = ["Children and Young Persons Act 1993 section 12C(5)",
                     "City of London (Various Powers) Act 1960 section 33",

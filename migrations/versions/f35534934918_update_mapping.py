@@ -11,6 +11,7 @@ revision = 'f35534934918'
 down_revision = '441441c32014'
 
 from alembic import op
+from sqlalchemy.sql import text
 
 NEW_STAT_PROV = {
     'Environmental Permitting (England and Wales) Regulations 2010, regulation 15': 't',
@@ -74,7 +75,7 @@ def get_charge_category_id(category_name, parent_id, conn):
         query = "SELECT id FROM charge_categories WHERE name = '{0}' and parent_id = {1};".format(category_name, parent_id)
     else:
         query = "SELECT id FROM charge_categories WHERE name = '{0}' and parent_id is null;".format(category_name)
-    res = conn.execute(query)
+    res = conn.execute(text(query))
     results = res.fetchall()
     if results is None or len(results) == 0:
         raise Exception(category_name + " does not exist in the DB")
@@ -83,7 +84,7 @@ def get_charge_category_id(category_name, parent_id, conn):
 
 def get_stat_prov_id(title, conn):
     query = "SELECT id from statutory_provision WHERE title = '{0}' ".format(title)
-    res = conn.execute(query)
+    res = conn.execute(text(query))
     results = res.fetchall()
     if results is None or len(results) == 0:
         raise Exception(title + 'does not exist in the DB')
@@ -93,7 +94,7 @@ def get_stat_prov_id(title, conn):
 def load_instrument_mapping(inst, category, parent_id, conn):
     category_id = get_charge_category_id(category, parent_id, conn)
     for instrument in inst:
-        res = conn.execute("select id from instruments where name ='{0}'".format(instrument))
+        res = conn.execute(text("select id from instruments where name ='{0}'".format(instrument)))
         results = res.fetchall()
         if results is None or len(results) == 0:
             raise Exception("Instrument '{}' does not exits in the DB to be linked".format(instrument))
